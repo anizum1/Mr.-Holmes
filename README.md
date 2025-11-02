@@ -231,25 +231,6 @@ mr-holmes/
 └── .gitignore           # Git ignore file
 ```
 
-## 🎓 For Academic Projects
-
-This tool is perfect for college final year projects. Here's what makes it stand out:
-
-### ✅ Strengths to Highlight
-- **Modular Architecture**: Easy to extend and customize
-- **Comprehensive Documentation**: Complete usage guides and examples
-- **Ethical Framework**: Built-in ethical guidelines and privacy protection
-- **Multiple Data Sources**: Integration with various platforms
-- **Real-World Applicable**: Practical use cases in security and research
-- **Professional Code**: Well-structured, commented, and maintainable
-
-### 📊 Presentation Tips
-1. **Demo username enumeration** - Works immediately without setup
-2. **Show image EXIF extraction** - Impressive visual results
-3. **Demonstrate report generation** - Professional output
-4. **Discuss ethical considerations** - Show responsibility
-5. **Explain extensibility** - Future improvements
-
 ## ⚖️ Ethical Guidelines
 
 ### ✅ DO:
