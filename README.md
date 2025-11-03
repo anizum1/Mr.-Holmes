@@ -28,7 +28,7 @@
 
 ```bash
 # 1. Download mr_holmes.py
-wget https://your-repo/mr_holmes.py
+wget https://anizum1/Mr.-Holmes/mr_holmes.py
 
 # 2. Install dependencies
 pip install requests Pillow exifread
