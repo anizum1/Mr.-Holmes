@@ -1274,7 +1274,7 @@ if __name__ == "__main__":
         main()
     except Exception as e:
         print(f"\n{Colors.BRIGHT_RED}❌ Critical error: {str(e)}{Colors.RESET}\n")
-        sys.exit(1), email):
+        sys.exit(1)
             return {"error": "Invalid email format"}
         
         username, domain = email.split('@')
