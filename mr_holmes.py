@@ -125,7 +125,7 @@ def print_animated_logo():
 {Colors.BRIGHT_RED}    🚬 {Colors.DIM}Puff... puff... {Colors.BRIGHT_RED}💨 {Colors.BRIGHT_WHITE}"The evidence never lies..."{Colors.RESET}
     
 {Colors.BRIGHT_BLUE}    ╔══════════════════════════════════════════════════════════════╗
-    ║  {Colors.BRIGHT_YELLOW}Version 2.0  {Colors.BRIGHT_WHITE}|  {Colors.BRIGHT_GREEN}Educational/Research Only  {Colors.BRIGHT_WHITE}|  {Colors.BRIGHT_CYAN}2024{Colors.BRIGHT_BLUE}     ║
+    ║  {Colors.BRIGHT_YELLOW}Version 2.45  {Colors.BRIGHT_WHITE}|  {Colors.BRIGHT_GREEN}Educational/Research Only  {Colors.BRIGHT_WHITE}|  {Colors.BRIGHT_CYAN}2025{Colors.BRIGHT_BLUE}     ║
     ╚══════════════════════════════════════════════════════════════╝{Colors.RESET}
 """
     
