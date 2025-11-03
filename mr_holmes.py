@@ -685,7 +685,7 @@ class EmailAnalyzer:
     @staticmethod
     def analyze_email(email: str) -> Dict:
         """Extract information from email address"""
-        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}
+        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
             return {"error": "Invalid email format"}
         
         username, domain = email.split('@')
