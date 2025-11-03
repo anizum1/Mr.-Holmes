@@ -685,7 +685,7 @@ class EmailAnalyzer:
     @staticmethod
     def analyze_email(email: str) -> Dict:
         """Extract information from email address"""
-        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}, email):
+        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}
             return {"error": "Invalid email format"}
         
         username, domain = email.split('@')
@@ -1261,4 +1261,606 @@ however improbable, must be the truth." - Sherlock Holmes{Colors.RESET}
         print(f"{Colors.BRIGHT_YELLOW}🔍 \"Perhaps another time, Watson.\"{Colors.RESET}\n")
         sys.exit(0)
     except Exception as e:
-        print(f"\n{Colors.
+        print(f"\n{Colors.BRIGHT_RED}❌ Confound it! An error occurred: {str(e)}{Colors.RESET}")
+        print(f"{Colors.BRIGHT_YELLOW}🔍 \"The plot thickens, Watson.\"{Colors.RESET}\n")
+        sys.exit(1)
+
+# ============================================================================
+# ENTRY POINT
+# ============================================================================
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        print(f"\n{Colors.BRIGHT_RED}❌ Critical error: {str(e)}{Colors.RESET}\n")
+        sys.exit(1), email):
+            return {"error": "Invalid email format"}
+        
+        username, domain = email.split('@')
+        
+        info = {
+            "email": email,
+            "username": username,
+            "domain": domain,
+            "email_hash_md5": hashlib.md5(email.lower().encode()).hexdigest(),
+            "email_hash_sha256": hashlib.sha256(email.lower().encode()).hexdigest(),
+            "possible_names": EmailAnalyzer.extract_possible_names(username),
+            "domain_info": EmailAnalyzer.get_domain_info(domain)
+        }
+        
+        return info
+    
+    @staticmethod
+    def extract_possible_names(username: str) -> List[str]:
+        """Try to extract possible real names from username"""
+        names = []
+        parts = re.split(r'[._-]', username)
+        parts = [p for p in parts if p and not p.isdigit()]
+        
+        if parts:
+            names.append(' '.join(parts).title())
+            names.append(' '.join(reversed(parts)).title())
+        
+        return names
+    
+    @staticmethod
+    def get_domain_info(domain: str) -> Dict:
+        """Get basic domain information"""
+        info = {
+            "domain": domain,
+            "is_disposable": EmailAnalyzer.is_disposable_email(domain),
+            "is_common_provider": domain in [
+                'gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com',
+                'icloud.com', 'protonmail.com', 'aol.com'
+            ]
+        }
+        
+        try:
+            ip = socket.gethostbyname(domain)
+            info["mx_ip"] = ip
+        except:
+            info["mx_ip"] = "Unable to resolve"
+        
+        return info
+    
+    @staticmethod
+    def is_disposable_email(domain: str) -> bool:
+        """Check if email domain is disposable"""
+        disposable_domains = [
+            'tempmail.com', '10minutemail.com', 'guerrillamail.com',
+            'mailinator.com', 'throwaway.email', 'temp-mail.org',
+            'fakeinbox.com', 'trashmail.com'
+        ]
+        return domain.lower() in disposable_domains
+
+# ============================================================================
+# PHONE ANALYZER
+# ============================================================================
+
+class PhoneAnalyzer:
+    """Analyze phone numbers"""
+    
+    @staticmethod
+    def analyze_phone(phone: str) -> Dict:
+        """Extract information from phone number"""
+        cleaned = re.sub(r'[^\d+]', '', phone)
+        
+        info = {
+            "original": phone,
+            "cleaned": cleaned,
+            "length": len(cleaned.replace('+', ''))
+        }
+        
+        if cleaned.startswith('+'):
+            if cleaned.startswith('+1'):
+                info["country"] = "USA/Canada"
+                info["country_code"] = "+1"
+            elif cleaned.startswith('+44'):
+                info["country"] = "United Kingdom"
+                info["country_code"] = "+44"
+            elif cleaned.startswith('+91'):
+                info["country"] = "India"
+                info["country_code"] = "+91"
+            elif cleaned.startswith('+86'):
+                info["country"] = "China"
+                info["country_code"] = "+86"
+            else:
+                info["country"] = "Unknown"
+                info["country_code"] = cleaned[:3]
+        
+        return info
+
+# ============================================================================
+# URL ANALYZER
+# ============================================================================
+
+class URLAnalyzer:
+    """Analyze URLs for OSINT"""
+    
+    @staticmethod
+    def analyze_url(url: str) -> Dict:
+        """Extract information from URL"""
+        from urllib.parse import urlparse, parse_qs
+        
+        parsed = urlparse(url)
+        
+        info = {
+            "url": url,
+            "scheme": parsed.scheme,
+            "domain": parsed.netloc,
+            "path": parsed.path,
+            "parameters": parse_qs(parsed.query) if parsed.query else {},
+            "fragment": parsed.fragment
+        }
+        
+        tracking_params = ['utm_source', 'utm_medium', 'utm_campaign', 
+                          'fbclid', 'gclid', 'ref', 'source']
+        
+        info["tracking_params"] = {
+            k: v for k, v in info["parameters"].items() 
+            if k in tracking_params
+        }
+        
+        short_domains = ['bit.ly', 't.co', 'tinyurl.com', 'goo.gl', 'ow.ly']
+        info["is_shortened"] = any(domain in parsed.netloc for domain in short_domains)
+        
+        return info
+    
+    @staticmethod
+    def expand_short_url(url: str) -> Optional[str]:
+        """Expand shortened URL"""
+        try:
+            response = requests.head(url, allow_redirects=True, timeout=5)
+            return response.url
+        except:
+            return None
+
+# ============================================================================
+# HASH IDENTIFIER
+# ============================================================================
+
+class HashIdentifier:
+    """Identify hash types"""
+    
+    HASH_PATTERNS = {
+        'MD5': (r'^[a-fA-F0-9]{32}, 32),
+        'SHA1': (r'^[a-fA-F0-9]{40}, 40),
+        'SHA256': (r'^[a-fA-F0-9]{64}, 64),
+        'SHA512': (r'^[a-fA-F0-9]{128}, 128),
+        'NTLM': (r'^[a-fA-F0-9]{32}, 32),
+        'MySQL': (r'^\*[a-fA-F0-9]{40}, 41)
+    }
+    
+    @staticmethod
+    def identify_hash(hash_string: str) -> List[str]:
+        """Identify possible hash types"""
+        possible_types = []
+        
+        for hash_type, (pattern, length) in HashIdentifier.HASH_PATTERNS.items():
+            if re.match(pattern, hash_string) and len(hash_string) == length:
+                possible_types.append(hash_type)
+        
+        return possible_types if possible_types else ["Unknown"]
+
+# ============================================================================
+# METADATA EXTRACTOR
+# ============================================================================
+
+class MetadataExtractor:
+    """Extract metadata from publicly available information"""
+    
+    @staticmethod
+    def analyze_timezone(timestamp: str) -> Dict:
+        """Analyze timezone information from timestamp"""
+        try:
+            dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+            return {
+                "utc_time": dt.isoformat(),
+                "timestamp": dt.timestamp(),
+                "day_of_week": dt.strftime("%A"),
+                "hour": dt.hour,
+                "date": dt.strftime("%Y-%m-%d"),
+                "time": dt.strftime("%H:%M:%S")
+            }
+        except:
+            return {"error": "Invalid timestamp"}
+    
+    @staticmethod
+    def analyze_posting_patterns(posts: List[Dict]) -> Dict:
+        """Analyze posting patterns to infer timezone/activity"""
+        if not posts:
+            return {"error": "No posts provided"}
+        
+        hours = []
+        days = []
+        
+        for post in posts:
+            timestamp = None
+            
+            if isinstance(post, dict):
+                if 'created_at' in post:
+                    timestamp = post['created_at']
+                elif 'data' in post and 'created_utc' in post['data']:
+                    timestamp = datetime.fromtimestamp(
+                        post['data']['created_utc']
+                    ).isoformat()
+            
+            if timestamp:
+                try:
+                    dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                    hours.append(dt.hour)
+                    days.append(dt.strftime("%A"))
+                except:
+                    continue
+        
+        if hours:
+            most_active_hour = max(set(hours), key=hours.count)
+            most_active_day = max(set(days), key=days.count)
+            
+            return {
+                "most_active_hour_utc": most_active_hour,
+                "most_active_day": most_active_day,
+                "total_posts_analyzed": len(hours),
+                "activity_by_hour": {h: hours.count(h) for h in sorted(set(hours))},
+                "activity_by_day": {d: days.count(d) for d in set(days)},
+                "estimated_timezone": MetadataExtractor.estimate_timezone(most_active_hour)
+            }
+        
+        return {"error": "No valid timestamps"}
+    
+    @staticmethod
+    def estimate_timezone(most_active_hour: int) -> str:
+        """Estimate timezone based on activity patterns"""
+        if 9 <= most_active_hour <= 23:
+            offset = most_active_hour - 15
+            if offset > 0:
+                return f"Likely UTC+{offset} to UTC+{offset+3}"
+            else:
+                return f"Likely UTC{offset} to UTC{offset+3}"
+        else:
+            return "Unable to estimate (unusual activity pattern)"
+
+# ============================================================================
+# REPORT GENERATOR
+# ============================================================================
+
+def generate_report(data: Dict, output_file: str = "holmes_report.txt"):
+    """Generate a text report from OSINT data"""
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write("="*80 + "\n")
+        f.write("MR. HOLMES - OSINT INVESTIGATION REPORT\n")
+        f.write(f"Generated: {datetime.now().isoformat()}\n")
+        f.write("="*80 + "\n\n")
+        
+        def write_dict(d, indent=0):
+            for key, value in d.items():
+                if isinstance(value, dict):
+                    f.write("  " * indent + f"{key.upper()}:\n")
+                    write_dict(value, indent + 1)
+                elif isinstance(value, list):
+                    f.write("  " * indent + f"{key}: {', '.join(map(str, value))}\n")
+                else:
+                    f.write("  " * indent + f"{key}: {value}\n")
+        
+        write_dict(data)
+        f.write("\n" + "="*80 + "\n")
+        f.write("\"Elementary, my dear Watson!\" - Case Closed\n")
+        f.write("="*80 + "\n")
+    
+    print_success(f"Report saved to: {output_file}")
+
+# ============================================================================
+# RESULT PRINTER
+# ============================================================================
+
+def print_results(data: Dict, title: str = "Results"):
+    """Pretty print results - Holmes style"""
+    print(f"\n{Colors.BRIGHT_YELLOW}{'═' * 70}{Colors.RESET}")
+    print(f"{Colors.BRIGHT_CYAN}🔍 CASE FILE: {Colors.BRIGHT_WHITE}{title}{Colors.RESET}")
+    print(f"{Colors.BRIGHT_YELLOW}{'═' * 70}{Colors.RESET}")
+    
+    def print_dict(d, indent=0):
+        for key, value in d.items():
+            if isinstance(value, dict):
+                print("  " * indent + f"{Colors.BRIGHT_MAGENTA}📋 {key.replace('_', ' ').title()}:{Colors.RESET}")
+                print_dict(value, indent + 1)
+            elif isinstance(value, list):
+                if value:
+                    print("  " * indent + f"{Colors.BRIGHT_GREEN}📋 {key.replace('_', ' ').title()}: {Colors.BRIGHT_WHITE}{', '.join(map(str, value))}{Colors.RESET}")
+            else:
+                print("  " * indent + f"{Colors.BRIGHT_CYAN}📋 {key.replace('_', ' ').title()}: {Colors.BRIGHT_WHITE}{value}{Colors.RESET}")
+    
+    print_dict(data)
+    print(f"{Colors.BRIGHT_YELLOW}{'═' * 70}{Colors.RESET}")
+    print(f"{Colors.BRIGHT_GREEN}🔎 \"The facts, Watson, just the facts.\"{Colors.RESET}")
+    print(f"{Colors.BRIGHT_YELLOW}{'═' * 70}{Colors.RESET}\n")
+
+# ============================================================================
+# MAIN APPLICATION
+# ============================================================================
+
+def main():
+    """Main application entry point"""
+    
+    # Print animated logo
+    print_animated_logo()
+    
+    parser = argparse.ArgumentParser(
+        description=f'{Colors.BRIGHT_CYAN}Mr. Holmes - Advanced OSINT Investigation Tool{Colors.RESET}',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=f"""
+{Colors.BRIGHT_YELLOW}═══════════════════════════════════════════════════════════════════════════{Colors.RESET}
+{Colors.BRIGHT_CYAN}ELEMENTARY INVESTIGATION TECHNIQUES:{Colors.RESET}
+
+{Colors.BRIGHT_GREEN}🔎 Username Investigation (NO API REQUIRED!):{Colors.RESET}
+  python mr_holmes.py username --check johndoe
+
+{Colors.BRIGHT_MAGENTA}🐦 Social Media Intelligence:{Colors.RESET}
+  python mr_holmes.py twitter --user elonmusk
+  python mr_holmes.py reddit --user spez --analyze-posts
+
+{Colors.BRIGHT_CYAN}📷 Image Forensics:{Colors.RESET}
+  python mr_holmes.py image --file photo.jpg
+  python mr_holmes.py image --file photo.jpg --reverse-geocode
+  python mr_holmes.py image --url https://example.com/image.jpg
+
+{Colors.BRIGHT_YELLOW}🌍 Geolocation Tracking:{Colors.RESET}
+  python mr_holmes.py geo --ip 8.8.8.8
+  python mr_holmes.py geo --coords 40.7128 -74.0060
+
+{Colors.BRIGHT_GREEN}📧 Contact Intelligence:{Colors.RESET}
+  python mr_holmes.py email --analyze john@example.com
+  python mr_holmes.py phone --analyze "+1-555-1234"
+
+{Colors.BRIGHT_BLUE}🔗 URL Analysis:{Colors.RESET}
+  python mr_holmes.py url --analyze https://example.com/page
+  python mr_holmes.py url --expand https://bit.ly/abc123
+
+{Colors.BRIGHT_RED}🔐 Hash Identification:{Colors.RESET}
+  python mr_holmes.py hash --identify 5d41402abc4b2a76b9719d911017c592
+
+{Colors.BRIGHT_MAGENTA}🕵️ Full Investigation:{Colors.RESET}
+  python mr_holmes.py investigate --username USER --email EMAIL --report
+
+{Colors.BRIGHT_YELLOW}═══════════════════════════════════════════════════════════════════════════
+{Colors.BRIGHT_WHITE}"When you have eliminated the impossible, whatever remains,
+however improbable, must be the truth." - Sherlock Holmes{Colors.RESET}
+{Colors.BRIGHT_YELLOW}═══════════════════════════════════════════════════════════════════════════{Colors.RESET}
+        """
+    )
+    
+    subparsers = parser.add_subparsers(dest='command', help='Investigation command')
+    
+    # Username command
+    username_parser = subparsers.add_parser('username', help='Username enumeration')
+    username_parser.add_argument('--check', type=str, required=True, help='Username to investigate')
+    
+    # Twitter command
+    twitter_parser = subparsers.add_parser('twitter', help='Twitter investigation')
+    twitter_parser.add_argument('--user', type=str, required=True, help='Twitter username')
+    twitter_parser.add_argument('--analyze-posts', action='store_true', help='Analyze posting patterns')
+    
+    # Reddit command
+    reddit_parser = subparsers.add_parser('reddit', help='Reddit investigation')
+    reddit_parser.add_argument('--user', type=str, required=True, help='Reddit username')
+    reddit_parser.add_argument('--analyze-posts', action='store_true', help='Analyze posting patterns')
+    
+    # Image command
+    image_parser = subparsers.add_parser('image', help='Image forensics')
+    image_parser.add_argument('--file', type=str, help='Image file path')
+    image_parser.add_argument('--url', type=str, help='Image URL')
+    image_parser.add_argument('--reverse-geocode', action='store_true', help='Reverse geocode GPS data')
+    
+    # Geo command
+    geo_parser = subparsers.add_parser('geo', help='Geolocation')
+    geo_parser.add_argument('--ip', type=str, help='IP address')
+    geo_parser.add_argument('--coords', nargs=2, type=float, metavar=('LAT', 'LON'), help='Coordinates')
+    
+    # Email command
+    email_parser = subparsers.add_parser('email', help='Email analysis')
+    email_parser.add_argument('--analyze', type=str, required=True, help='Email address')
+    
+    # Phone command
+    phone_parser = subparsers.add_parser('phone', help='Phone analysis')
+    phone_parser.add_argument('--analyze', type=str, required=True, help='Phone number')
+    
+    # URL command
+    url_parser = subparsers.add_parser('url', help='URL analysis')
+    url_parser.add_argument('--analyze', type=str, help='URL to analyze')
+    url_parser.add_argument('--expand', type=str, help='Expand shortened URL')
+    
+    # Hash command
+    hash_parser = subparsers.add_parser('hash', help='Hash identification')
+    hash_parser.add_argument('--identify', type=str, required=True, help='Hash to identify')
+    
+    # Investigate command
+    investigate_parser = subparsers.add_parser('investigate', help='Full investigation')
+    investigate_parser.add_argument('--username', type=str, help='Username')
+    investigate_parser.add_argument('--email', type=str, help='Email address')
+    investigate_parser.add_argument('--phone', type=str, help='Phone number')
+    investigate_parser.add_argument('--report', action='store_true', help='Generate report')
+    
+    args = parser.parse_args()
+    
+    if not args.command:
+        parser.print_help()
+        print_detective_quote()
+        return
+    
+    # Execute commands
+    try:
+        if args.command == 'username':
+            print(f"\n{Colors.BRIGHT_GREEN}🔍 Elementary! Beginning username investigation...{Colors.RESET}")
+            print_investigating_animation()
+            results = UsernameEnumerator.check_username(args.check)
+            print_detective_quote()
+            
+        elif args.command == 'twitter':
+            print(f"\n{Colors.BRIGHT_BLUE}🐦 Investigating Twitter profile: @{args.user}{Colors.RESET}")
+            print_investigating_animation()
+            twitter = TwitterOSINT()
+            result = twitter.search_user(args.user)
+            
+            if result:
+                print_results(result, f"Twitter Profile: @{args.user}")
+                
+                if args.analyze_posts:
+                    print(f"{Colors.BRIGHT_MAGENTA}📊 Observing behavioral patterns...{Colors.RESET}")
+                    print_pipe_smoke()
+                    posts = twitter.get_recent_tweets(result['user_id'])
+                    if posts:
+                        patterns = MetadataExtractor.analyze_posting_patterns(posts)
+                        print_results(patterns, "Activity Pattern Analysis")
+                        print(f"{Colors.BRIGHT_GREEN}🔍 \"Habits, Watson, are the key to understanding people.\"{Colors.RESET}")
+        
+        elif args.command == 'reddit':
+            print(f"\n{Colors.BRIGHT_RED}🤖 Investigating Reddit profile: u/{args.user}{Colors.RESET}")
+            print_investigating_animation()
+            reddit = RedditOSINT()
+            result = reddit.search_user(args.user)
+            
+            if result:
+                print_results(result, f"Reddit Profile: u/{args.user}")
+                
+                if args.analyze_posts:
+                    print(f"{Colors.BRIGHT_MAGENTA}📊 Studying the subject's patterns...{Colors.RESET}")
+                    posts = reddit.get_user_posts(args.user)
+                    if posts:
+                        patterns = MetadataExtractor.analyze_posting_patterns(posts)
+                        print_results(patterns, "Activity Pattern Analysis")
+        
+        elif args.command == 'image':
+            if args.file:
+                print(f"\n{Colors.BRIGHT_CYAN}📷 Examining photographic evidence: {args.file}{Colors.RESET}")
+                print(f"{Colors.BRIGHT_YELLOW}🔎 Searching for hidden clues...{Colors.RESET}")
+                print_investigating_animation()
+                analyzer = ImageAnalyzer()
+                result = analyzer.extract_exif(args.file)
+                print_results(result, "Image Forensic Analysis")
+                
+                if args.reverse_geocode and 'latitude' in result and 'longitude' in result:
+                    print(f"{Colors.BRIGHT_GREEN}🌍 Pinpointing the location...{Colors.RESET}")
+                    geo = GeolocationAnalyzer()
+                    location = geo.reverse_geocode(result['latitude'], result['longitude'])
+                    if location:
+                        print_results(location, "Location Identified")
+            
+            elif args.url:
+                print(f"\n{Colors.BRIGHT_CYAN}🌐 Acquiring evidence from: {args.url}{Colors.RESET}")
+                print_investigating_animation()
+                analyzer = ImageAnalyzer()
+                temp_path = analyzer.download_image(args.url)
+                if temp_path:
+                    result = analyzer.extract_exif(temp_path)
+                    print_results(result, "Remote Image Analysis")
+                    os.remove(temp_path)
+                    print(f"{Colors.BRIGHT_GREEN}🔍 \"Evidence collected and analyzed, Watson!\"{Colors.RESET}")
+        
+        elif args.command == 'geo':
+            if args.ip:
+                print(f"\n{Colors.BRIGHT_YELLOW}🌍 Tracing network address: {args.ip}{Colors.RESET}")
+                print(f"{Colors.BRIGHT_CYAN}🔎 Cross-referencing databases...{Colors.RESET}")
+                print_investigating_animation()
+                geo = GeolocationAnalyzer()
+                result = geo.lookup_ip(args.ip)
+                if result:
+                    print_results(result, "IP Geolocation Intelligence")
+            
+            elif args.coords:
+                lat, lon = args.coords
+                print(f"\n{Colors.BRIGHT_YELLOW}📍 Reverse geocoding coordinates: {lat}, {lon}{Colors.RESET}")
+                print(f"{Colors.BRIGHT_CYAN}🔎 Consulting my maps...{Colors.RESET}")
+                print_investigating_animation()
+                geo = GeolocationAnalyzer()
+                result = geo.reverse_geocode(lat, lon)
+                if result:
+                    print_results(result, "Location Intelligence")
+        
+        elif args.command == 'email':
+            print(f"\n{Colors.BRIGHT_MAGENTA}📧 Analyzing correspondence: {args.analyze}{Colors.RESET}")
+            print(f"{Colors.BRIGHT_CYAN}🔎 Examining the evidence...{Colors.RESET}")
+            print_investigating_animation()
+            result = EmailAnalyzer.analyze_email(args.analyze)
+            print_results(result, "Email Intelligence")
+        
+        elif args.command == 'phone':
+            print(f"\n{Colors.BRIGHT_GREEN}📱 Tracing communication device: {args.analyze}{Colors.RESET}")
+            print(f"{Colors.BRIGHT_CYAN}🔎 Cross-referencing databases...{Colors.RESET}")
+            print_investigating_animation()
+            result = PhoneAnalyzer.analyze_phone(args.analyze)
+            print_results(result, "Phone Intelligence")
+        
+        elif args.command == 'url':
+            if args.analyze:
+                print(f"\n{Colors.BRIGHT_BLUE}🔗 Following the digital trail: {args.analyze}{Colors.RESET}")
+                print(f"{Colors.BRIGHT_CYAN}🔎 Examining breadcrumbs...{Colors.RESET}")
+                print_investigating_animation()
+                result = URLAnalyzer.analyze_url(args.analyze)
+                print_results(result, "URL Analysis")
+            
+            if args.expand:
+                print(f"\n{Colors.BRIGHT_BLUE}🔗 Revealing the true destination: {args.expand}{Colors.RESET}")
+                print(f"{Colors.BRIGHT_CYAN}🔎 Unmasking the redirect...{Colors.RESET}")
+                print_investigating_animation()
+                expanded = URLAnalyzer.expand_short_url(args.expand)
+                if expanded:
+                    print(f"{Colors.BRIGHT_GREEN}✅ Destination revealed: {expanded}{Colors.RESET}")
+                else:
+                    print(f"{Colors.BRIGHT_RED}❌ The trail has gone cold{Colors.RESET}")
+        
+        elif args.command == 'hash':
+            print(f"\n{Colors.BRIGHT_RED}🔐 Deciphering the cipher: {args.identify}{Colors.RESET}")
+            print(f"{Colors.BRIGHT_CYAN}🔎 Consulting my references...{Colors.RESET}")
+            print_investigating_animation()
+            hash_types = HashIdentifier.identify_hash(args.identify)
+            print(f"{Colors.BRIGHT_GREEN}📋 Identification: {', '.join(hash_types)}{Colors.RESET}")
+        
+        elif args.command == 'investigate':
+            print(f"\n{Colors.BRIGHT_MAGENTA}🕵️  Commencing full investigation...{Colors.RESET}")
+            print(f"{Colors.BRIGHT_CYAN}🔎 Gathering all available evidence...{Colors.RESET}")
+            print_pipe_smoke()
+            investigation_data = {}
+            
+            if args.username:
+                print(f"\n{Colors.BRIGHT_YELLOW}👤 Investigating subject: {args.username}{Colors.RESET}")
+                investigation_data['username_check'] = UsernameEnumerator.check_username(args.username)
+            
+            if args.email:
+                print(f"\n{Colors.BRIGHT_MAGENTA}📧 Analyzing correspondence: {args.email}{Colors.RESET}")
+                investigation_data['email_analysis'] = EmailAnalyzer.analyze_email(args.email)
+            
+            if args.phone:
+                print(f"\n{Colors.BRIGHT_GREEN}📱 Tracing communications: {args.phone}{Colors.RESET}")
+                investigation_data['phone_analysis'] = PhoneAnalyzer.analyze_phone(args.phone)
+            
+            if args.report and investigation_data:
+                filename = f"holmes_case_{args.username or 'unknown'}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+                print(f"\n{Colors.BRIGHT_BLUE}📝 Preparing case file: {filename}{Colors.RESET}")
+                generate_report(investigation_data, filename)
+                print(f"\n{Colors.BRIGHT_GREEN}✅ Case closed! Report filed.{Colors.RESET}")
+                print(f"{Colors.BRIGHT_YELLOW}🔍 \"Elementary, my dear Watson!\"{Colors.RESET}")
+        
+        # Final quote
+        if args.command != 'investigate':
+            print_detective_quote()
+    
+    except KeyboardInterrupt:
+        print(f"\n\n{Colors.BRIGHT_RED}⚠️  Investigation interrupted!{Colors.RESET}")
+        print(f"{Colors.BRIGHT_YELLOW}🔍 \"Perhaps another time, Watson.\"{Colors.RESET}\n")
+        sys.exit(0)
+    except Exception as e:
+        print(f"\n{Colors.BRIGHT_RED}❌ Confound it! An error occurred: {str(e)}{Colors.RESET}")
+        print(f"{Colors.BRIGHT_YELLOW}🔍 \"The plot thickens, Watson.\"{Colors.RESET}\n")
+        sys.exit(1)
+
+# ============================================================================
+# ENTRY POINT
+# ============================================================================
+
+if __name__ == "__main__":
+    try:
+        main()
+    except Exception as e:
+        print(f"\n{Colors.BRIGHT_RED}❌ Critical error: {str(e)}{Colors.RESET}\n")
+        sys.exit(1)
