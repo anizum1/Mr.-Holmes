@@ -835,12 +835,12 @@ class HashIdentifier:
     """Identify hash types"""
     
     HASH_PATTERNS = {
-        'MD5': (r'^[a-fA-F0-9]{32}, 32),
-        'SHA1': (r'^[a-fA-F0-9]{40}, 40),
-        'SHA256': (r'^[a-fA-F0-9]{64}, 64),
-        'SHA512': (r'^[a-fA-F0-9]{128}, 128),
-        'NTLM': (r'^[a-fA-F0-9]{32}, 32),
-        'MySQL': (r'^\*[a-fA-F0-9]{40}, 41)
+        'MD5': (r'^[a-fA-F0-9]{32}$', 32),
+        'SHA1': (r'^[a-fA-F0-9]{40}$', 40),
+        'SHA256': (r'^[a-fA-F0-9]{64}$', 64),
+        'SHA512': (r'^[a-fA-F0-9]{128}$', 128),
+        'NTLM': (r'^[a-fA-F0-9]{32}$', 32),
+        'MySQL': (r'^\*[a-fA-F0-9]{40}$', 41)
     }
     
     @staticmethod
