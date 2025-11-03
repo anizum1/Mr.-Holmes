@@ -841,12 +841,6 @@ class HashIdentifier:
         'SHA512': (r'^[a-fA-F0-9]{128}$', 128),
         'NTLM': (r'^[a-fA-F0-9]{32}$', 32),
         'MySQL': (r'^\*[a-fA-F0-9]{40}$', 41)
-    }$', 32),
-        'SHA1': (r'^[a-fA-F0-9]{40}$', 40),
-        'SHA256': (r'^[a-fA-F0-9]{64}$', 64),
-        'SHA512': (r'^[a-fA-F0-9]{128}$', 128),
-        'NTLM': (r'^[a-fA-F0-9]{32}$', 32),
-        'MySQL': (r'^\*[a-fA-F0-9]{40}$', 41)
     }
     
     @staticmethod
@@ -859,6 +853,7 @@ class HashIdentifier:
                 possible_types.append(hash_type)
         
         return possible_types if possible_types else ["Unknown"]
+
 
 # ============================================================================
 # METADATA EXTRACTOR
